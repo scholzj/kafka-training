@@ -175,3 +175,65 @@ transaction.state.log.min.isr=2
 * Check for reassignment completion
     * `bin/kafka-reassign-partitions.sh --zookeeper localhost:2181 --reassignment-json-file reassignment.json --verify`
     * If it completed, check the reassignment results using `bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic my-topic`
+
+## Kafka Connect
+
+### Standalone
+
+* Review the file `config/connect-standalone.properties`
+  * Open it for editing and make following changes:
+  * Set `bootstrap.servers` to `localhost:9092,localhost:9093,localhost:9094,localhost:9095`
+  * Set `key.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+  * Set `value.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+  * Set `key.converter.schemas.enable` to `false`
+  * Set `value.converter.schemas.enable` to `false`
+* Review the file `config/connect-file-sink.properties`
+  * Open it for editing and make following changes:
+  * Set `topic` to `test-topic`
+  * Set `file` to `/tmp/connector-1.txt`
+* Run Kafka Connect in standalone mode:
+  * `bin/connect-standalone.sh config/connect-standalone.properties config/connect-file-sink.properties`
+* Check the file `/tmp/connector-1.txt` for messages (It should contain the _Hello World_ message we sent before)
+* You can run standalone Kafka Connect with multiple plugins
+  * Copy the plugin configuration we used previously `cp config/connect-file-sink.properties config/connect-file-sink2.properties`
+  * Edit the new file and change the `name` of the connector and the `file`
+  * Run Kafka Connect in standalone mode with two plugins:
+    * `bin/connect-standalone.sh config/connect-standalone.properties config/connect-file-sink.properties config/connect-file-sink2.properties`
+  * Check that the file for the second connector has been created and contains the message as well
+
+### Distributed
+
+* Review the file `config/connect-distributed.properties`
+* Copy the file `config/connect-distributed.properties` to 3 separate files:
+  * `cp config/connect-distributed.properties config/connect-distributed-1.properties && cp config/connect-distributed.properties config/connect-distributed-2.properties && cp config/connect-distributed.properties config/connect-distributed-3.properties`
+* Edit the configuration files and change following:
+  * In `config/connect-distributed-1.properties`:
+    * Set `rest.port` to `8083`
+    * Set `bootstrap.servers` to `localhost:9092,localhost:9093,localhost:9094,localhost:9095`
+    * Set `key.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+    * Set `value.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+    * Set `key.converter.schemas.enable` to `false`
+    * Set `value.converter.schemas.enable` to `false`
+  * In `config/connect-distributed-2.properties`:
+    * Set `rest.port` to `8083`
+    * Set `bootstrap.servers` to `localhost:9092,localhost:9093,localhost:9094,localhost:9095`
+    * Set `key.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+    * Set `value.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+    * Set `key.converter.schemas.enable` to `false`
+    * Set `value.converter.schemas.enable` to `false`
+  * In `config/connect-distributed-3.properties`:
+    * Set `rest.port` to `8085`
+    * Set `bootstrap.servers` to `localhost:9092,localhost:9093,localhost:9094,localhost:9095`
+    * Set `key.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+    * Set `value.converter`  to `org.apache.kafka.connect.storage.StringConverter`
+    * Set `key.converter.schemas.enable` to `false`
+    * Set `value.converter.schemas.enable` to `false`
+* Run three node Kafka Connect cluster in distirbuted mode:
+  * `bin/connect-distributed.sh config/connect-distributed-1.properties`
+  * `bin/connect-distributed.sh config/connect-distributed-2.properties`
+  * `bin/connect-distributed.sh config/connect-distributed-3.properties`
+* Check the connector plugins
+  * `curl localhost:8083/connector-plugins | jq`
+* Deploy a FileSink plugin
+  * `curl -X POST -H "Content-Type: application/json" --data '{ "name": "distributed-connector", "config": { "connector.class": "FileStreamSink", "tasks.max": "1", "topics": "test-topic", "file": "/tmp/distributed.txt" } }' localhost:8084/connectors`
+* Check that the message has been written using `less /tmp/distributed.txt`
