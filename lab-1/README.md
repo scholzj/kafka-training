@@ -167,7 +167,7 @@ transaction.state.log.min.isr=2
 ```
 
 * Generate the new recommended assignment which will distribute the topic between brokers 0, 1, 2, and 3
-  * `bin/kafka-reassign-partitions.sh --zookeeper localhost:2181 --topics-to-move-json-file topics-to-move.json --broker-list 3 --generate`
+  * `bin/kafka-reassign-partitions.sh --zookeeper localhost:2181 --topics-to-move-json-file topics-to-move.json --broker-list 0,1,2,3 --generate`
   * Save the proposed output to JSON file name `reassignment.json`
   * If needed, you can make changes to the proposed reassignment
 * Execute the reassignment:
